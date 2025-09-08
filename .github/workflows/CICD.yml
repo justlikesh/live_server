@@ -3,9 +3,9 @@ name: CICD
 # main branch push 혹은 pull 요청이 들어오면 실행
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "master" ]
 
 # 읽기 권한을 준다.
 permissions:
