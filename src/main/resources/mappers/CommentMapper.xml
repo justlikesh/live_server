@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ssafy.fitcha.model.dao.CommentDao">
+
+	<!-- 챌린지 댓글 삭제 -->
+	<delete id="deleteChallengeComment" parameterType="comment">
+		DELETE FROM challenge_comment
+		 WHERE challenge_board_id = #{challengeBoardId}
+		   AND challenge_comment_id = #{challengeCommentId}
+	</delete>
+	
+	<!--  챌린지 댓글 조회 -->
+	<select id="selectChallengeCommentList" parameterType="int">
+		SELECT *
+		  FROM challenge_comment
+		 WHERE challenge_board_id = #{challengeBoardId}
+	  ORDER BY reg_date DESC
+	
+	</select>
+	
+	<!-- 챌린지 댓글 등록 -->
+	<insert id="insertChallengeComment" parameterType="comment" >
+		INSERT INTO challenge_comment (challenge_board_id, user_id, content, writer)
+             VALUES (#{challengeBoardId},#{userId},#{content},#{writer})
+	</insert>
+	
+	<!-- 챌린지 댓글 수정 -->
+	<update id="updateChallengeComment" parameterType="comment">
+		UPDATE challenge_comment
+		   SET content = #{content}
+		 WHERE challenge_comment_id = #{challengeCommentId}
+		   AND challenge_board_id = #{challengeBoardId}
+	</update>
+	
+	
+	<!-- 인증글 -->
+	
+	<!-- 인증글 댓글 목록 조회  -->
+	<select id="selectProofCommentList" parameterType="int">
+		SELECT *
+		  FROM proof_comment
+		 WHERE proof_board_id = #{id}
+		 ORDER BY reg_date DESC
+	</select>
+	
+	<!-- 인증글 댓글 등록 -->
+	<insert id="insertProofComment" parameterType="CommentProof">
+		INSERT INTO proof_comment (proof_board_id, user_id, content, writer)
+             VALUES (#{proofBoardId},#{userId},#{content},#{writer})
+	</insert>
+	
+	<!-- 인증글 댓글 삭제 -->
+	<delete id="deleteProofComment" parameterType="CommentProof">
+		DELETE 
+		  FROM proof_comment
+		 WHERE proof_board_id = #{proofBoardId}
+		   AND proof_comment_id = #{proofCommentId}
+	</delete>
+	
+	<!-- 인증글 댓글 수정 -->
+	<update id="updateProofComment" parameterType="CommentProof">
+		UPDATE proof_comment
+		   SET content = #{content}
+		 WHERE proof_comment_id = #{proofCommentId}
+		   AND proof_board_id = #{proofBoardId}
+	</update>
+	
+	<!-- 영상 댓글 -->
+
+	<!--  영상 댓글 조회 -->
+	<select id="selectVideoCommentList" parameterType="java.lang.String">
+		SELECT *
+		  FROM fittube_comment
+		 WHERE video_id = #{id}
+	  ORDER BY reg_date DESC
+	
+	</select>
+	
+	<!-- 영상 댓글 등록-->
+	<insert id="insertVideoComment" parameterType="comment" >
+		INSERT INTO fittube_comment (video_id, user_id, content, writer)
+             VALUES (#{videoId},#{userId},#{content},#{writer})
+	</insert>
+	
+		<!-- 영상 댓글 삭제 -->
+	<delete id="deleteVideoComment" parameterType="comment">
+		DELETE 
+		  FROM fittube_comment
+		 WHERE video_id = #{videoId}
+		   AND comment_id = #{commentId}
+	</delete>
+	
+	<!-- 영상  댓글 수정 -->
+	<update id="updateVideoComment" parameterType="comment">
+		UPDATE fittube_comment
+		   SET content = #{content}
+		 WHERE comment_id = #{commentId}
+		   AND video_id = #{videoId}
+	</update>
+	
+</mapper>

@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ssafy.fitcha.model.dao.ProofDao">
+
+	<!-- 인증글 검색 조회 (검색 조건 없으면 전체 조회) -->
+	<select id="selectSearchProofList" parameterType="SearchProof"
+		resultType="Proof">
+		SELECT *
+		FROM proof_board
+		<where>
+			<choose>
+				<!-- 제목 검색 -->
+				<when test="key == 'title'">
+					title LIKE concat('%', #{word}, '%')
+				</when>
+				<!-- 내용 검색 -->
+				<when test="key == 'content'">
+					content LIKE concat('%', #{word}, '%')
+				</when>
+				<!-- 제목 + 내용 검색 -->
+				<when test="key == 'both'">
+					title LIKE concat('%', #{word}, '%') OR content LIKE
+					concat('%',
+					#{word}, '%')
+				</when>
+				<!-- 작성자 검색 -->
+				<when test="key == 'writer'">
+					writer LIKE concat('%', #{word}, '%')
+				</when>
+			</choose>
+		</where>
+		<!-- 정렬 -->
+		<if test="orderBy != null">
+			ORDER BY ${orderBy} ${orderByDir}
+		</if>
+		ORDER BY reg_date DESC
+	</select>
+
+	<!-- 챌린지에 해당하는 인증글 조회 -->
+	<select id="selectProofListByChallenge" parameterType="int"
+		resultType="Proof">
+		SELECT *
+		FROM proof_board
+		WHERE challenge_board_id =
+		#{challengeBoardId}
+	</select>
+
+	<!-- 인증글 상세 조회 -->
+	<select id="selectProofBoard" parameterType="int"
+		resultType="Proof">
+		SELECT *
+		FROM proof_board
+		WHERE proof_board_id = #{id}
+	</select>
+
+	<!-- 인증글 등록 -->
+	<insert id="insertProofBoard" parameterType="Proof"
+		useGeneratedKeys="true" keyProperty="proofBoardId">
+		INSERT INTO proof_board
+		(challenge_board_id, user_id, title, content,
+		writer,
+		exercise_type,body_part,level)
+		VALUES (#{challengeBoardId}, #{userId},
+		#{title}, #{content}, #{writer},#{exerciseType}, #{bodyPart},
+		#{level})
+	</insert>
+
+	<!-- 인증글 수정 -->
+	<update id="updateProofBoard" parameterType="Proof">
+		UPDATE proof_board
+		SET title = #{title},
+		content = #{content}
+		WHERE proof_board_id =
+		#{proofBoardId}
+	</update>
+
+	<!-- 인증글 삭제 -->
+	<delete id="deleteProofBoard" parameterType="int">
+		DELETE FROM
+		proof_board
+		WHERE proof_board_id = #{id}
+	</delete>
+
+	<!-- 챌린지글 삭제시 내 인증글 삭제 -->
+	<delete id="deleteMyProofBoard" parameterType="proof">
+		DELETE FROM
+		proof_board
+		WHERE challenge_board_id = #{challengeBoardId}
+		AND writer =
+		#{writer}
+	</delete>
+
+	<!-- 인증글 등록시 해쉬태그 별도 테이블에 저장 -->
+	<insert id="insertProofBoardHashtags" parameterType="map">
+		INSERT INTO proof_board_hashtag (proof_board_id, hashtag)
+		VALUES
+		<if test="hashTags != null">
+			<foreach collection="hashTags" item="tag" separator=",">
+				(#{proofBoardId}, #{tag})
+			</foreach>
+		</if>
+	</insert>
+	<!-- 인증글 목록에서 모든 해쉬태그 가져오기 -->
+	<select id="selectHashTagsByProofBoardIds" resultType="map"
+		parameterType="list">
+		SELECT proof_board_id, hashtag
+		FROM proof_board_hashtag
+		WHERE
+		proof_board_id IN
+		<foreach collection="list" item="id" open="(" separator=","
+			close=")">
+			#{id}
+		</foreach>
+	</select>
+
+	<!-- 인증글 상세에서 해쉬태그 가져오기 -->
+	<select id="selectHashTagByProofBoardId" parameterType="int">
+		SELECT
+		hashtag
+		FROM proof_board_hashtag
+		WHERE proof_board_id = #{proofBoardId}
+	</select>
+
+	<!-- 인증글에 있는 해쉬태그 수정을 위한 삭제 -->
+	<update id="deleteProofBoardHashtags" parameterType="int">
+		DELETE
+		FROM
+		proof_board_hashtag
+		WHERE proof_board_id = #{proofBoardId}
+	</update>
+
+	<!-- 인증글 조회수 증가 -->
+	<update id="increaseViewCount" parameterType="int">
+		UPDATE proof_board
+		SET view_count = view_count + 1
+		WHERE proof_board_id = #{proofBoardId}
+	</update>
+
+	<!-- 인증글 이미지들 조회 -->
+	<select id="selectProofImages" resultType="String">
+		SELECT file_url
+		FROM
+		proof_file
+		ORDER BY proof_file_id DESC
+		LIMIT 10;
+	</select>
+</mapper>

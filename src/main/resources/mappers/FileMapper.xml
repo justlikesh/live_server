@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ssafy.fitcha.model.dao.FileDao">
+	<!-- 챌린지 파일 목록 조회  -->
+	<select id="selectChallengeFileList" parameterType="int" resultType="challengeFile">
+		SELECT *
+	 	FROM challenge_file
+		WHERE challenge_board_id = #{id}
+	</select> 
+	<delete id="deleteChallengeFile" parameterType="int">
+		DELETE FROM challenge_file
+		WHERE challenge_file_id =#{id}
+	</delete>
+	<insert id="insertChallengeFile" parameterType="challengeFile">
+		INSERT INTO challenge_file(challenge_board_id, file_upload_name, file_original_name, file_url, writer)
+			 VALUES (#{challengeBoardId},#{fileUploadName},#{fileOriginalName},#{fileUrl},#{writer})
+	</insert>
+	
+	
+	<!-- 인증글 파일 목록 조회  -->
+	<select id="selectProofFileList" parameterType="int" resultType="proofFile">
+		SELECT *
+	 	FROM proof_file
+		WHERE proof_board_id = #{id}
+	</select> 
+	<delete id="deleteProofFile" parameterType="int">
+		DELETE 
+		FROM proof_file
+		WHERE proof_file_id =#{id}
+	</delete>
+	<insert id="insertProofFile" parameterType="proofFile">
+		INSERT INTO proof_file(proof_board_id, file_upload_name, file_original_name, file_url, writer)
+			 VALUES (#{proofBoardId},#{fileUploadName},#{fileOriginalName},#{fileUrl},#{writer})
+	</insert>
+	
+	<!-- 인증글 파일 수정 -->
+	<update id="updateProofFile" parameterType="proofFile">
+		UPDATE proof_file
+		SET file_upload_name = #{fileUploadName},
+			file_original_name = #{fileOriginalName},
+			file_url = #{fileUrl}
+		WHERE proof_board_id = #{proofBoardId}
+	</update>
+
+	
+
+</mapper>

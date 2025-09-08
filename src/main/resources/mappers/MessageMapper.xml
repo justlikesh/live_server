@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ssafy.fitcha.model.dao.MessageDao">
+<!-- 메세지 조회 -->
+<select id="selectMessages" parameterType="String" resultType="Message">
+	SELECT *
+	  FROM message
+	 WHERE sender = #{nickname}
+	  	OR recipient = #{nickname}
+</select>
+
+<!-- 메세지 보내기 -->
+<insert id="insertMessage" parameterType="Message">
+	INSERT INTO message (sender, recipient, title, content)
+         VALUES (#{sender},#{recipient},#{title},#{content})
+</insert>
+
+<!-- 메세지 삭제 -->
+<delete id="deleteMessage" parameterType="Message">
+	DELETE FROM message
+		  WHERE message_id = #{messageId}
+		<if test="whoDelete == 'sender'">
+		   AND who_delete = 'recipient' 
+		</if>
+		<if test="whoDelete == 'recipient'">
+		   AND who_delete = 'sender' 
+		</if>
+		
+</delete>
+<!-- 메세지 삭제여부 수정  -->
+<update id="updateMessage" parameterType="Message">
+	UPDATE message
+	<if test="whoDelete == 'sender'">
+	   SET who_delete = 'sender' 
+	</if>
+	<if test="whoDelete == 'recipient'">
+	   SET  who_delete = 'recipient' 
+	</if> 
+	 WHERE message_id = #{messageId}
+</update>
+
+</mapper>

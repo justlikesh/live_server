@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+	<meta charset="UTF-8" />
+	<title>카카오 로그인 테스트</title>
+</head>
+
+<body>
+	<button id="kakaoLoginBtn">카카오로 로그인</button>
+	<button id="gooleLoginBtn">google 로그인</button>
+	<button id="naverLoginBtn">naver 로그인</button>
+
+	<script>
+		document.getElementById('kakaoLoginBtn').addEventListener('click', () => {
+			window.location.href = 'http://localhost:8080/oauth2/authorization/kakao';
+		});
+
+		document.getElementById('gooleLoginBtn').addEventListener('click', () => {
+			window.location.href = 'http://localhost:8080/oauth2/authorization/google';
+		});
+		document.getElementById('naverLoginBtn').addEventListener('click', () => {
+			window.location.href = 'http://localhost:8080/oauth2/authorization/naver';
+		});
+	</script>
+</body>
+
+</html>
+
+
+<!-- kauth.kakao.com/oauth/authorize?response_type=code&client_id=e5e34307b416ff…nge=8HW7S5QOWQqpeBzSNjTZBSbMTBhB07Cs6Zsx69kxudQ&code_challenge_method=S256	 -->
+<!-- https://kauth.kakao.com/oauth/logout?client_id=e5e34307b416ffd845ef380bce0ea921&logout_redirect_uri=http://localhost:8080/login/oauth2/code/kakao
+-->

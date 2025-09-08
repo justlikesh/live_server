@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ssafy.fitcha.model.dao.UserDao">
+
+	<!-- 유저 회원가입 (등록) -->
+	<insert id="insertUser" parameterType="User"
+		useGeneratedKeys="true" keyProperty="userBoardId">
+		INSERT INTO user_board (user_id,
+		password, email, name, nick_name, age, gender)
+		VALUES
+		(#{userId},
+		#{password}, #{email}, #{name}, #{nickName}, age, gender)
+	</insert>
+
+
+	<!-- 유저 탈퇴 (삭제) -->
+	<delete id="deleteUser" parameterType="int">
+		DELETE
+		FROM user_board
+		WHERE user_board_id = #{userBoardId}
+	</delete>
+
+	<!-- 유저 로그인 -->
+	<!-- 로그인 요청한 id와 DB에 등록된 동일한 id가 있으면 null이 아닌 유저가 반환 된다. -->
+	<select id="selectRegistedUser" parameterType="User"
+		resultType="User">
+		SELECT *
+		FROM user_board
+		WHERE user_id = #{userId}
+	</select>
+
+
+	<!-- 유저 팔로우 -->
+	<insert id="insertFollowUser">
+		INSERT INTO user_follow(follower_nick_name,
+		following_nick_name)
+		VALUES
+		(#{followerNickName}, #{followingNickName})
+	</insert>
+
+	<!-- 유저 언팔로우 -->
+	<delete id="deleteFollowUser">
+		DELETE
+		FROM user_follow
+		WHERE follower_nick_name =
+		#{followerNickName}
+		AND following_nick_name = #{followingNickName}
+	</delete>
+
+	<!-- 유저 팔로우, 팔로잉 수 전체 조회 -->
+	<select id="selectFollowCount" parameterType="string"
+		resultType="Map">
+		SELECT follower_count AS followerCount, following_count AS
+		followingCount
+		FROM user_board
+		WHERE nick_name = #{nickName};
+	</select>
+
+	<!-- 유저 팔로워 전체 조회 -->
+	<select id="selectFollowerAll" parameterType="string"
+		resultType="string">
+		SELECT follower_nick_name
+		FROM user_follow
+		WHERE
+		following_nick_name = #{userNickName}
+	</select>
+
+
+	<!-- 유저 팔로잉 전체 조회 -->
+	<select id="selectFollowingAll" parameterType="string"
+		resultType="string">
+		SELECT following_nick_name
+		FROM user_follow
+		WHERE
+		follower_nick_name = #{userNickName}
+	</select>
+
+	<!-- 닉네임 존재 -->
+	<select id="existsByNickname" parameterType="string">
+		SELECT EXISTS (
+		SELECT 1 FROM user_board WHERE nick_name = #{nickName}
+		) AS is_exists;
+	</select>
+
+	<!-- 유저 정보 조회 -->
+	<select id="selectUser" parameterType="string">
+		SELECT *
+		FROM user_board
+		WHERE nick_name = #{userNickName}
+	</select>
+
+	<!-- 유저 정보 수 -->
+	<update id="updateUser" parameterType="User">
+		UPDATE user_board
+		SET
+		profile_img_url = #{profileImgUrl}
+		WHERE user_board_id =
+		#{userBoardId}
+	</update>
+
+    <!-- 상대방 팔로우 여부 체크 -->	
+	<select id="selectFollowCheck" resultType="boolean"
+		parameterType="map">
+		SELECT CASE WHEN COUNT(*) > 0 THEN TRUE ELSE FALSE END
+		FROM user_follow
+		WHERE follower_nick_name = #{followerNickName}
+		AND following_nick_name = #{followingNickName}
+	</select>
+</mapper>

@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ssafy.fitcha.model.dao.ChallengeDao">
+	<!-- 검색 목록 조회(전체 목록 조회) -->
+<select id="selectSearchChallengeBoardList" parameterType="SearchChallenge" resultType="challenge">
+  SELECT *
+  FROM challenge_board
+  WHERE 1 = 1
+
+  <!-- 검색어가 있을 때만 key 조건 적용 -->
+  <if test="word != null and word != ''">
+
+    <if test="key == 'title'">
+      AND title LIKE CONCAT('%', #{word}, '%')
+    </if>
+    <if test="key == 'content'">
+      AND content LIKE CONCAT('%', #{word}, '%')
+    </if>
+    <if test="key == 'both'">
+      AND (title LIKE CONCAT('%', #{word}, '%')
+           OR content LIKE CONCAT('%', #{word}, '%'))
+    </if>
+    <if test="key == 'writer'">
+      AND writer LIKE CONCAT('%', #{word}, '%')
+    </if>
+    <if test="key == 'exerciseType'">
+      AND exercise_type LIKE CONCAT('%', #{word}, '%')
+    </if>
+    <if test="key == 'bodyPart'">
+      AND body_part LIKE CONCAT('%', #{word}, '%')
+    </if>
+    <if test="key == 'level'">
+      AND `level` LIKE CONCAT('%', #{word}, '%')
+    </if>
+
+  </if>
+	ORDER BY reg_date DESC
+</select>
+	
+	<!-- 상세 조회 -->
+	<select id="selectChallengeBoard" parameterType="int" resultType="challenge">
+		SELECT *
+		  FROM challenge_board
+		 WHERE challenge_board_id = #{id}
+	</select>
+	
+	<!-- 수정 -->
+	<update id="updateChallengeBoard" parameterType="challenge">
+		UPDATE challenge_board
+		    SET title = #{title},
+		    	content = #{content}, 
+		    	exercise_type = #{exerciseType},
+		    	body_part = #{bodyPart},
+		   		`level` = #{level},
+			    total_participant_count = #{totalParticipantCount},
+			    duration = #{duration}
+		  WHERE challenge_board_id = #{challengeBoardId} 
+	</update>
+	
+	<!-- 삭제  -->
+	<delete id="deleteChallengeBoard" parameterType="int">
+		DELETE FROM challenge_board
+		      WHERE challenge_board_id =#{id}
+	</delete>
+
+	<!-- 등록 -->
+	<insert id="insertChallengeBoard" parameterType="challenge" useGeneratedKeys="true" keyProperty="challengeBoardId">
+		INSERT INTO challenge_board (user_id, title, content, writer, exercise_type, body_part, level, duration,total_participant_count, subhead)
+			 VALUES (#{userId},#{title},#{content},#{writer}, #{exerciseType},#{bodyPart},#{level},#{duration},#{totalParticipantCount},#{subhead})
+	</insert>
+	
+	<!-- 조회수 증가  -->
+	<update id="updateChallengeViewCount" parameterType="int">
+		UPDATE challenge_board
+		   SET view_count = view_count+1
+		 WHERE challenge_board_id = #{id}
+	</update>
+
+	<!-- 최근등록한| 참여자수 많은| 좋아요많은 | 조회수 많은 챌린지글 조회-->
+	<select id="selectTop10Challenges" parameterType="java.lang.String" resultType="Challenge">
+  	 	 SELECT *
+  	  	   FROM challenge_board
+   	 <choose>
+        <when test="orderBy == 'recent'">
+            ORDER BY reg_date DESC
+        </when>
+        <when test="orderBy == 'participants'">
+            ORDER BY participant_count DESC
+        </when>
+        <when test="orderBy == 'likes'">
+            ORDER BY like_count DESC
+        </when>
+        <when test="orderBy == 'views'">
+            ORDER BY view_count DESC
+        </when>
+  	  </choose>
+ 	   LIMIT 5
+	</select>
+
+	<!-- 현재 유저의 참여 여부 조회 -->
+	<select id="selectChallengeParticipated" parameterType="Participate" resultType="int">
+		SELECT COUNT(*)
+		  FROM participant_challenge
+		 WHERE challenge_board_id = #{challengeBoardId}
+   		   AND participant = #{participant}
+
+	</select>
+	
+	<!-- 참여 등록 -->
+	<insert id="insertParticipantChallenge" parameterType="challenge">
+		INSERT INTO participant_challenge (challenge_board_id, participant)
+			 VALUES (#{challengeBoardId},#{writer})
+	</insert>
+	
+		<!-- 참여자 수 증가 -->
+<update id="increaseParticipantCount" parameterType="int">
+  UPDATE challenge_board
+  SET participant_count = participant_count + 1
+  WHERE challenge_board_id = #{challengeBoardId}
+</update>
+
+		<!-- 참여 취소 -->
+	<delete id="deleteChallengeParticipate" parameterType="Participate">
+		DELETE FROM participant_challenge
+		 WHERE challenge_board_id = #{challengeBoardId}
+   		   AND participant = #{participant}
+	</delete>
+	
+
+<!-- 참여자 수 감소 (1 미만으로 내려가지 않도록 제한) -->
+<update id="decreaseParticipantCount" parameterType="int">
+  UPDATE challenge_board
+  SET participant_count = CASE 
+      WHEN participant_count > 1 THEN participant_count - 1
+      ELSE 1
+  END
+  WHERE challenge_board_id = #{challengeBoardId}
+</update>
+	
+	<!-- 유저가 참여한 챌린지 조회  -->
+	<select id="selectChallengeByNickName" resultType="challenge" parameterType="string">
+		SELECT cb.*
+		FROM participant_challenge pc
+		JOIN challenge_board cb
+		ON pc.challenge_board_id = cb.challenge_board_id
+		WHERE pc.participant = #{nickName}
+	</select>
+	
+	
+	<!-- 챌린지의 참여자 수 조회 -->
+	<select id="selectChallengeParticipantCount" parameterType="int" resultType="int">
+		SELECT COUNT(*)
+		  FROM participant_challenge
+		 WHERE challenge_board_id = #{challengeBoardId}
+	</select>
+	
+	
+	
+	<!-- 챌린지 종료 저장-->
+	<update id="updateChallengeFinish" parameterType="int">
+  UPDATE challenge_board
+  SET finish = true
+  WHERE challenge_board_id = #{id}
+</update>
+
+<!-- 챌린지 참여율 높은 top5 유저 조회 -->
+<select id="selectTop5Challengers" resultType="map">
+  SELECT participant, COUNT(*) AS participationCount
+  FROM participant_challenge
+  GROUP BY participant
+  ORDER BY participationCount DESC
+  LIMIT 5
+</select>
+	
+</mapper>
