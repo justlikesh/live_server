@@ -1,6 +1,6 @@
 package com.ssafy.fitcha.controller;
 
-import com.google.api.client.util.Value;
+import org.springframework.beans.factory.annotation.Value;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
@@ -20,7 +20,7 @@ public class HealthCheckController {
   @Value("${server.serverAddress}")
   private String serverAddress;
 
-  @Value("serverName")
+  @Value("${serverName}")
   private String serverName;
 
   @GetMapping("/hc")
