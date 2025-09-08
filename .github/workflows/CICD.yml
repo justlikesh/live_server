@@ -1,19 +1,24 @@
 name: CICD
 
+# main branch push 혹은 pull 요청이 들어오면 실행
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
+# 읽기 권한을 준다.
 permissions:
   contents: read
 
+# 일 단위로 build와 deploy 두가지 존재.
+# build 과정이 CI
 jobs:
   build:
-    runs-on: ubuntu-latest
-    steps:
+    runs-on: ubuntu-latest              # ubuntu 최신 버전을 사용 (CI 과정에서 가상PC가 존재)
+    steps:                              # name 단위로 step을 나누어 실행  
       - uses: actions/checkout@v3
+
       - name: Install JDK 11
         uses: actions/setup-java@v3
         with:
@@ -21,43 +26,58 @@ jobs:
           distribution: 'temurin'
 
       - name: Build with Maven
+        working-directory: ./wangyong
         run: |
-          chmod 777 ./mvnw
-          ./mvnw clean package -Dtestskip
+          chmod +x ./mvnw
+          ./mvnw clean package -DskipTests   # 여기까지 Spring boot 빌드
 
-      - name: Login to DockerHub
+      - name: Login to DockerHub            # Spring Boot Image 도커HUB에 저장
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+          
+      # github 프라이빗 등록한 값을 기반으로 로그인.
 
       - name: Build Docker
-        run: docker build --platform linux/amd64 -t ${{ secrets.DOCKERHUB_USERNAME }}/live_server .
+        run: |
+          docker build --platform linux/amd64 \
+            -f wangyong/Dockerfile \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/live_server \
+            wangyong
+
       - name: Push Docker
-        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/live_server:latest
+        run: |
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/live_server:latest
+      # Spring boot 이미지 만드는 과정 + Spring Boot의 DockerFile을 이용해서 이루어진다. 
+      # docker hub의 username 기준으로 live_server 이름의 repository 하나를 만든다 
+      # 이미지를 만들었다면 docker 허브에 push
+
         
+# build 과정이 정상적으로 실행되면 depoly 과정이 실행
+# deploy 과정이 CD
   deploy:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest               # ubuntu 최신 버전을 사용 (CI/CD 과정에서 가상PC가 존재)
     steps:
       - name: Set target IP
         run: |
           STATUS=$(curl -o /dev/null -w "%{http_code}" "http://${{ secrets.LIVE_SERVER_IP }}/env")
           echo $STATUS
           if [ $STATUS = 200 ]; then
-            CURRENT_UPSTREAM=$(curl -s "http://${{ secrets.LIVE_SERVER_IP }}/env")
+            CURRENT_UPSTREAM=$(curl -s "http://${{ secrets.LIVE_SERVER_IP }}/env")    # health check 컨트롤러 요청 (현재 실행중인 blue or green 확인)
           else
-            CURRENT_UPSTREAM=green
+            CURRENT_UPSTREAM=green        # 최초 요청 시에는 아직 서버 구동이 안된상태이기 때문에 시작을 green으로 하겠다. (404)
           fi
-          echo CURRENT_UPSTREAM=$CURRENT_UPSTREAM >> $GITHUB_ENV
-          if [ $CURRENT_UPSTREAM = blue ]; then
-            echo "CURRENT_PORT=8080" >> $GITHUB_ENV
-            echo "STOPPED_PORT=8081" >> $GITHUB_ENV
-            echo "TARGET_UPSTREAM=green" >> $GITHUB_ENV
+          echo CURRENT_UPSTREAM=$CURRENT_UPSTREAM >> $GITHUB_ENV    # CICD 과정 $GITHUB_ENV 전역변수 하나 만든다 (green or blue)
+          if [ $CURRENT_UPSTREAM = blue ]; then                     # 하단부에서 재사용할 예정 ${{ env.CURRENT_UPSTREAM }}로 사용된다.
+            echo "CURRENT_PORT=8080" >> $GITHUB_ENV        # 현재 실행포트 :blue
+            echo "STOPPED_PORT=8081" >> $GITHUB_ENV        # 정지 포트 (앞으로 변경 될 예정) :green
+            echo "TARGET_UPSTREAM=green" >> $GITHUB_ENV    # green 으로 변경하겠다.
           elif [ $CURRENT_UPSTREAM = green ]; then
-            echo "CURRENT_PORT=8081" >> $GITHUB_ENV
-            echo "STOPPED_PORT=8080" >> $GITHUB_ENV
-            echo "TARGET_UPSTREAM=blue" >> $GITHUB_ENV
+            echo "CURRENT_PORT=8081" >> $GITHUB_ENV        # 현재 실행포트 :green
+            echo "STOPPED_PORT=8080" >> $GITHUB_ENV        # 정지 포트 (앞으로 변경 될 예정) :blue
+            echo "TARGET_UPSTREAM=blue" >> $GITHUB_ENV     # blue 로 변경하겠다.
           else
             echo "error"
             exit 1
@@ -68,28 +88,33 @@ jobs:
         with:
           username: ubuntu
           host: ${{ secrets.LIVE_SERVER_IP }}
-          key: ${{ secrets.EC2_SSH_KEY }}
+          key: ${{ secrets.EC2_SSH_KEY }}         # ec2 서버로 접속 하겠다.
           script_stop: true
           script: |
-            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/live_server:latest
-            sudo docker-compose -f docker-compose-${{env.TARGET_UPSTREAM}}.yml up -d
+            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/live_server:latest      # Spring Boot 이미지 pull 받기
+            sudo docker-compose -f docker-compose-${{env.TARGET_UPSTREAM}}.yml up -d   # 상단에서 지정한 blue or green을 통해 도커 컴포즈 파일 선택.
+      
+      # 선택된 docker - compose 파일로 PROFILES, ENV 값 지정 -> Dockerfile에서 active, env 값이 결정 -> application.yml 설정 값 결정.     
       
       - name: Check deploy server URL
         uses: jtalk/url-health-check-action@v3
         with:
-          url: http://${{ secrets.LIVE_SERVER_IP }}:${{env.STOPPED_PORT}}/env
-          max-attempts: 3
-          retry-delay: 10s
-
+          url: http://${{ secrets.LIVE_SERVER_IP }}:${{env.STOPPED_PORT}}/env  # 앞으로 "변경 될" 서버에 요청 -> 잘되는 check
+          max-attempts: 6
+          retry-delay: 10s   # 10초마다 한번씩 총 3회 요청 (옮기려는 포트가 잘 작동하는지 보겠다.) -> 무응답 시 배포 실
+          # 반드시 포트 설정을 해주어야 한다.(AWS)
+          
       - name: Change nginx upstream
         uses: appleboy/ssh-action@master
         with:
           username: ubuntu
           host: ${{ secrets.LIVE_SERVER_IP }}
-          key: ${{ secrets.EC2_SSH_KEY }}
+          key: ${{ secrets.EC2_SSH_KEY }}            # 다시 ssh 이용해서 접속
           script_stop: true
           script: |
             sudo docker exec -i nginxserver bash -c 'echo "set \$service_url ${{ env.TARGET_UPSTREAM }};" > /etc/nginx/conf.d/service-env.inc && nginx -s reload' 
+       # 엔진엑스 컨테이너의 service_url을 env.TARGET_UPSTREAM로 변경해라.
+       # 블루면 8080포트 그린이면 8081포트로 연결.
 
       - name: Stop current server
         uses: appleboy/ssh-action@master
@@ -99,5 +124,5 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script_stop: true
           script: |
-            sudo docker stop ${{env.CURRENT_UPSTREAM}}
+            sudo docker stop ${{env.CURRENT_UPSTREAM}}  # 기존 진행하던 컨티에너 종료 (컨테이너 네임을 blue, green 으로 해서 적용이 됨)
             sudo docker rm ${{env.CURRENT_UPSTREAM}}
